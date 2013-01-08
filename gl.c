@@ -22,6 +22,9 @@ static double ux = 0, uy = 0;
 // Userangle, can be changed by pressing Home / End
 static double ua = 0;
 
+// Rastermode for QUADS / LINES, can be changed by F1 / F2 / F3 / F4
+static GLenum rastermode = GL_LINES;
+
 extern struct RunTime RT;
 
 void do_prerender(GLfloat * Vertex, GLfloat * Colour) {
@@ -30,6 +33,7 @@ void do_prerender(GLfloat * Vertex, GLfloat * Colour) {
 	struct Context ctx;
 	double newangle = 0;
 	double mx, my, mix, miy;
+	double lc, cp, ls, sp, c, s;
 
 	mx = my = mix = miy = 0;
 	ctx.posx = 0.0;
@@ -40,67 +44,112 @@ void do_prerender(GLfloat * Vertex, GLfloat * Colour) {
 
 		// Upchar should be rendered
 		if (T_UPCHAR == RT.line[i].type) {
-			Colour[6 * i] = Colour[6 * i + 3] = 1 - RT.line[i].dctx.r;
-	    	Colour[6 * i + 1] = Colour[6 * i + 4] = 1 - RT.line[i].dctx.g;
-	    	Colour[6 * i + 2] = Colour[6 * i + 5] = 1 - RT.line[i].dctx.b;
+			if (GL_LINES == rastermode) {
+				Colour[6 * i + 0] = Colour[6 * i + 3] = 1 - RT.line[i].dctx.r;
+	    		Colour[6 * i + 1] = Colour[6 * i + 4] = 1 - RT.line[i].dctx.g;
+	    		Colour[6 * i + 2] = Colour[6 * i + 5] = 1 - RT.line[i].dctx.b;
+			} else {
+				Colour[12 * i + 0] = Colour[12 * i + 3] = Colour[12 * i + 6] = Colour[12 * i + 9] = 1 - RT.line[i].dctx.r;
+	    		Colour[12 * i + 1] = Colour[12 * i + 4] = Colour[12 * i + 7] = Colour[12 * i + 10] = 1 - RT.line[i].dctx.g;
+	    		Colour[12 * i + 2] = Colour[12 * i + 5] = Colour[12 * i + 8] = Colour[12 * i + 11] = 1 - RT.line[i].dctx.b;
+	    	}
 
 	    	if (fabs(newangle) < 0.001) {
-	    		Vertex[4 * i] = ctx.posx;
-	    		Vertex[4 * i + 1] = ctx.posy;
-	    		Vertex[4 * i + 2] = ctx.posx = (ctx.posx + L * cos(ctx.angle));
-	    			 Vertex[4 * i + 3] = ctx.posy = (ctx.posy + L * sin(ctx.angle));
-	    		 } else {
-	    			 Vertex[4 * i] = ctx.posx;
-	    			 Vertex[4 * i + 1] = ctx.posy;
-	    			 Vertex[4 * i + 2] = ctx.posx = (ctx.posx + L * cos(ctx.angle + newangle));
-	    			 Vertex[4 * i + 3] = ctx.posy = (ctx.posy + L * sin(ctx.angle + newangle));
-	    			 ctx.angle += newangle;
-	    			 newangle = 0;
-	    		 }
-	    	 }
+	    		c = cos(ctx.angle);
+	    		s = sin(ctx.angle);
+	    		lc = L * c;
+	    		ls = L * s;
+	    		cp = cos(ctx.angle + PI / 2);
+	    		sp = sin(ctx.angle + PI / 2);
+	    		if (GL_LINES == rastermode) {
+	    			Vertex[4 * i + 0] = ctx.posx;
+	    			Vertex[4 * i + 1] = ctx.posy;
+	    			Vertex[4 * i + 2] = ctx.posx + lc;
+	    			Vertex[4 * i + 3] = ctx.posy + ls;
+	    		} else {
+	    			Vertex[8 * i + 0] = ctx.posx - RT.line[i].dctx.width * (cp + c);
+	    			Vertex[8 * i + 1] = ctx.posy - RT.line[i].dctx.width * (sp + s);
+	    			Vertex[8 * i + 6] = ctx.posx + RT.line[i].dctx.width * (cp - c);
+	    			Vertex[8 * i + 7] = ctx.posy + RT.line[i].dctx.width * (sp - s);
+	    			Vertex[8 * i + 2] = ctx.posx + lc - RT.line[i].dctx.width * (cp - c);
+	    			Vertex[8 * i + 3] = ctx.posy + ls - RT.line[i].dctx.width * (sp - s);
+	    			Vertex[8 * i + 4] = ctx.posx + lc + RT.line[i].dctx.width * (cp + c);
+	    			Vertex[8 * i + 5] = ctx.posy + ls + RT.line[i].dctx.width * (sp + s);
+	    		}
+	    		ctx.posx += lc;
+	    		ctx.posy += ls;
+	    	} else {
+	    		c = cos(ctx.angle + newangle);
+	    		s = sin(ctx.angle + newangle);
+	    		lc = L * c;
+	    		ls = L * s;
+	    		cp = cos(ctx.angle + newangle + PI / 2);
+	    		sp = sin(ctx.angle + newangle + PI / 2);
+	    		if (GL_LINES == rastermode) {
+	    			Vertex[4 * i + 0] = ctx.posx;
+	    			Vertex[4 * i + 1] = ctx.posy;
+	    			Vertex[4 * i + 2] = ctx.posx + lc;
+	    			Vertex[4 * i + 3] = ctx.posy + ls;
+	    		} else {
+	    			Vertex[8 * i + 0] = ctx.posx - RT.line[i].dctx.width * (cp + c);
+	    			Vertex[8 * i + 1] = ctx.posy - RT.line[i].dctx.width * (sp + s);
+	    			Vertex[8 * i + 6] = ctx.posx + RT.line[i].dctx.width * (cp - c);
+	    			Vertex[8 * i + 7] = ctx.posy + RT.line[i].dctx.width * (sp - s);
+	    			Vertex[8 * i + 2] = ctx.posx + lc - RT.line[i].dctx.width * (cp - c);
+	    			Vertex[8 * i + 3] = ctx.posy + ls - RT.line[i].dctx.width * (sp - s);
+	    			Vertex[8 * i + 4] = ctx.posx + lc + RT.line[i].dctx.width * (cp + c);
+	    			Vertex[8 * i + 5] = ctx.posy + ls + RT.line[i].dctx.width * (sp + s);
+	    		}
+	    		ctx.angle += newangle;
+	    		newangle = 0;
+	    		ctx.posx += lc;
+	    		ctx.posy += ls;
+	    	}
+	    }
 
-			 // Lochar controls only evolution of the curve
-	    	 if (T_LOCHAR == RT.line[i].type) {
-	    		 if (fabs(newangle) < 0.001) {
-	    			 ctx.posx += L * cos(ctx.angle);
-	    			 ctx.posy += L * sin(ctx.angle);
-	    		 } else {
-	    			 ctx.posx += L * cos(ctx.angle + newangle);
-	    			 ctx.posy += L * sin(ctx.angle + newangle);
-	    			 ctx.angle += newangle;
-	    			 newangle = 0;
-	    		 }
-	    	 }
+		// Lochar controls only evolution of the curve
+	    if (T_LOCHAR == RT.line[i].type) {
+	    	if (fabs(newangle) < 0.001) {
+	    		ctx.posx += L * cos(ctx.angle);
+	    		ctx.posy += L * sin(ctx.angle);
+	    	} else {
+	    		ctx.posx += L * cos(ctx.angle + newangle);
+	    		ctx.posy += L * sin(ctx.angle + newangle);
+	    		ctx.angle += newangle;
+	    		newangle = 0;
+			}
+	    }
 
-	    	 if (T_PLUS == RT.line[i].type) {
-	    		 newangle =  RT.line[i].value * PI / 180;
-	    	 }
-	    	 if (T_MINUS == RT.line[i].type) {
-	    		 newangle = -RT.line[i].value * PI / 180;
-	    	 }
+	    if (T_PLUS == RT.line[i].type) {
+	    	newangle =  RT.line[i].value * PI / 180;
+	    }
 
-	    	 if (T_PUSH == RT.line[i].type) {
-	    		 push(ctx);
-	    	 }
+	    if (T_MINUS == RT.line[i].type) {
+	    	newangle = -RT.line[i].value * PI / 180;
+	    }
 
-	    	 if (T_POP == RT.line[i].type) {
-	    		 ctx = pop();
-	    	 }
+	    if (T_PUSH == RT.line[i].type) {
+	    	push(ctx);
+	    }
 
-	    	 if (ctx.posx > mx)
-	    		 mx = ctx.posx;
-	    	 if (ctx.posy > my)
-	    		 my = ctx.posy;
+	    if (T_POP == RT.line[i].type) {
+	    	ctx = pop();
+	    }
 
-	    	 if (ctx.posx < mix)
-	    		 mix = ctx.posx;
-	    	 if (ctx.posy < miy)
-	    		 miy = ctx.posy;
-	     }
+	    if (ctx.posx > mx)
+	    	mx = ctx.posx;
+	    if (ctx.posy > my)
+	    	my = ctx.posy;
 
-	  scale = ((mx - mix) > (my - miy)) ? mx - mix : my - miy;
-	  zx = -((mx + mix) / (scale * 1.4)) / 2;
-	  zy = -((my + miy) / (scale * 1.4)) / 2;
+	    if (ctx.posx < mix)
+	    	mix = ctx.posx;
+		if (ctx.posy < miy)
+	    	miy = ctx.posy;
+	}
+
+	scale = ((mx - mix) > (my - miy)) ? mx - mix : my - miy;
+	zx = -((mx + mix) / (scale * 1.4)) / 2;
+	zy = -((my + miy) / (scale * 1.4)) / 2;
 }
 
 void do_render()
@@ -112,8 +161,8 @@ void do_render()
     glPolygonOffset(1, 1);
     glEnable(GL_DEPTH_TEST);
 
-    Vertex = (GLfloat *)malloc(RT.size * 2 * 2 * sizeof(GLfloat));
-    Colour = (GLfloat *)malloc(RT.size * 2 * 3 * sizeof(GLfloat));
+    Vertex = (GLfloat *) malloc(RT.size * 4 * 2 * sizeof(GLfloat));
+    Colour = (GLfloat *) malloc(RT.size * 4 * 3 * sizeof(GLfloat));
 
 	do_prerender(Vertex, Colour);
 
@@ -124,7 +173,11 @@ void do_render()
     glLoadIdentity();
     glTranslated(ux + zx, uy + zy, 0);
     glRotated(ua, 0, 0, 1);
-    glScaled(1/(scale * 1.4 * userscale), 1/(scale * 1.4 * userscale), 1);
+    glScaled(1 / (scale * 1.4 * userscale), 1 / (scale * 1.4 * userscale), 1);
+
+	glPolygonMode(GL_FRONT, rastermode);
+	glEnable (GL_POINT_SMOOTH);
+	glEnable (GL_POLYGON_SMOOTH);
 
     glVertexPointer(2, GL_FLOAT, 0, Vertex);
     glColorPointer(3, GL_FLOAT, 0, Colour);
@@ -132,7 +185,10 @@ void do_render()
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
 
-    glDrawArrays(GL_LINES, 0, 2 * RT.size);
+	if (GL_LINES == rastermode)
+		glDrawArrays(GL_LINES, 0, 2 * RT.size);
+	else
+    	glDrawArrays(GL_QUADS, 0, 4 * RT.size);
 
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
@@ -140,7 +196,12 @@ void do_render()
     glFlush();
     glutSwapBuffers();
 
-    printf("Drawed %d vertices\n", RT.size * 2);
+    free(Colour);
+
+	if (GL_LINES == rastermode)
+		printf("Drawed %d vertices\n", RT.size * 2);
+    else
+		printf("Drawed %d vertices\n", RT.size * 4);
 
 }
 
@@ -169,6 +230,18 @@ void do_press(int cb, int x, int y) {
 			break;
 		case GLUT_KEY_END:
 			ua -= PI / 2;
+			break;
+		case GLUT_KEY_F1:
+			rastermode = GL_POINT;
+			break;
+		case GLUT_KEY_F2:
+			rastermode = GL_LINE;
+			break;
+		case GLUT_KEY_F3:
+			rastermode = GL_FILL;
+			break;
+		case GLUT_KEY_F4:
+			rastermode = GL_LINES;
 			break;
 	}
 	glutPostRedisplay();
