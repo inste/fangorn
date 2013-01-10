@@ -27,6 +27,9 @@ static GLenum rastermode = GL_LINES;
 
 extern struct RunTime RT;
 
+static GLfloat * GVertex;
+static GLfloat * GColour;
+
 void do_prerender(GLfloat * Vertex, GLfloat * Colour) {
 
 	int i;
@@ -154,17 +157,14 @@ void do_prerender(GLfloat * Vertex, GLfloat * Colour) {
 
 void do_render()
 {
-	GLfloat * Vertex;
-	GLfloat * Colour;
+    memset(GVertex, 0, RT.size * 4 * 2 * sizeof(GLfloat));
+    memset(GColour, 0, RT.size * 4 * 3 * sizeof(GLfloat));
 
     glClear(GL_COLOR_BUFFER_BIT);
     glPolygonOffset(1, 1);
     glEnable(GL_DEPTH_TEST);
 
-    Vertex = (GLfloat *) malloc(RT.size * 4 * 2 * sizeof(GLfloat));
-    Colour = (GLfloat *) malloc(RT.size * 4 * 3 * sizeof(GLfloat));
-
-	do_prerender(Vertex, Colour);
+	do_prerender(GVertex, GColour);
 
     glClear(GL_COLOR_BUFFER_BIT);
     glEnable(GL_BLEND);
@@ -179,8 +179,8 @@ void do_render()
 	glEnable (GL_POINT_SMOOTH);
 	glEnable (GL_POLYGON_SMOOTH);
 
-    glVertexPointer(2, GL_FLOAT, 0, Vertex);
-    glColorPointer(3, GL_FLOAT, 0, Colour);
+    glVertexPointer(2, GL_FLOAT, 0, GVertex);
+    glColorPointer(3, GL_FLOAT, 0, GColour);
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
@@ -195,8 +195,6 @@ void do_render()
 
     glFlush();
     glutSwapBuffers();
-
-    free(Colour);
 
 	if (GL_LINES == rastermode)
 		printf("Drawed %d vertices\n", RT.size * 2);
@@ -249,6 +247,9 @@ void do_press(int cb, int x, int y) {
 
 
 void start_gl_render(int argc, char ** argv) {
+    GVertex = (GLfloat *) malloc(RT.size * 4 * 2 * sizeof(GLfloat));
+    GColour = (GLfloat *) malloc(RT.size * 4 * 3 * sizeof(GLfloat));
+
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(600, 600);
@@ -261,4 +262,7 @@ void start_gl_render(int argc, char ** argv) {
     glutDisplayFunc(do_render);
     glutSpecialFunc(do_press);
     glutMainLoop();
+
+    free(GColour);
+    free(GVertex);
 }
